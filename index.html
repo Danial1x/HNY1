@@ -39,6 +39,13 @@
         #entry-screen {
             background-color: #fce4ec; /* พื้นหลังสีชมพูอ่อน */
             cursor: pointer;
+            /* FIX: Ensure flex items are centered and visible */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem; /* 32px */
+            padding: 1rem;
+            flex-wrap: wrap; /* Allow wrapping on small screens */
         }
         
         /* Pixel Heart (Uiverse.io by anandita-3217) */
@@ -50,6 +57,8 @@
             padding: 20px;
             animation: heartbeat 2s infinite ease-in-out;
             cursor: pointer;
+            /* FIX: Ensure it's not pushed out */
+            flex-shrink: 0; 
         }
         .pixel {
             width: 20px;
@@ -99,6 +108,9 @@
         }
 
         /* Loading SVG (Uiverse.io by RaspberryBee) */
+        .loading {
+             flex-shrink: 0; 
+        }
         .loading svg polyline {
             fill: none;
             stroke-width: 3;
@@ -558,7 +570,7 @@
             padding-top: 50px;
         }
 
-        /* Final Loading 2: Simple Heartbeat Loader (by vikramsinghnegi) - REVERTED */
+        /* Final Loading 2: Simple Heartbeat Loader (by vikramsinghnegi) */
         .simple-heart-loader {
             position: relative;
             width: 40px;
@@ -578,7 +590,8 @@
             left: 0;
             bottom: 0;
             transform: rotate(45deg);
-            transform-origin: 50% 68%; /* กลับไปใช้ 68% (แบบไม่สมมาตรที่อินชอบ) */
+            /* FIX: ทำให้หัวใจสมมาตร (ใช้ 50% 100%) */
+            transform-origin: 50% 100%; 
             box-shadow: 5px 4px 5px rgba(0, 0, 0, 0.1) inset; 
         }
         .simple-heart-loader:after {
@@ -1045,12 +1058,12 @@
                 type: 'gallery',
                 buttonText: 'เปิดแกลเลอรี',
                 images: [
-                    'https://files.catbox.moe/3hryre.jpg', 
-                    'https://files.catbox.moe/fzvku9.jpg', 
-                    'https://files.catbox.moe/p6ftp0.JPG',
-                    'https://files.catbox.moe/a3742g.PNG',
-                    'https://files.catbox.moe/wbsesd.jpg',
-                    'https://files.catbox.moe/9rlltx.jpg'
+                    'https://files.catbox.moe/3hryre.jpg', // 1
+                    'https://files.catbox.moe/fzvku9.jpg', // 2
+                    'https://files.catbox.moe/p6ftp0.JPG', // 3
+                    'https://files.catbox.moe/a3742g.PNG', // 4
+                    'https://files.catbox.moe/wbsesd.jpg', // 5
+                    'https://files.catbox.moe/9rlltx.jpg'  // 6
                 ]
             },
             { 
@@ -1186,89 +1199,99 @@
 
 
             // 1. รอคลิกปุ่มหัวใจ (Entry point)
-            heartButton.onclick = () => {
-                // เริ่มโหลดเสียง Tone.js
-                setupAudio();
+            // *** FIX: Make onclick async and await setupAudio ***
+            heartButton.onclick = async () => { 
                 
-                // 1.1 เล่นเพลงตอนกดหัวใจ
-                bgMusic.play().catch(e => console.error("Audio play failed:", e));
+                try {
+                    // 1.0 *** AWAIT AUDIO SETUP ***
+                    await setupAudio();
+                    console.log("Audio setup complete.");
+                    
+                } catch (audioError) {
+                    // ถ้า Audio พัง (เช่น ใน iOS) ก็ช่างมัน ทำต่อไปแบบไม่มีเสียง 'ติ๊ด'
+                    console.error("Audio setup failed, continuing without sound effects:", audioError);
+                    audioReady = false; // Make sure sounds don't try to play
                 
-                // 1.2 โชว์ Music Player
-                musicPlayerContainer.classList.remove('opacity-0');
-                musicPlayerContainer.style.opacity = '1';
-                if (loadingRight) loadingRight.style.display = 'none'; // ซ่อนชีพจรขวา
-                
-                // 1.3 ซ่อนปุ่ม (Heart Screen)
-                entryScreen.style.transition = 'opacity 0.5s ease-out';
-                entryScreen.style.opacity = '0';
-                setTimeout(() => {
-                    entryScreen.style.display = 'none';
-                }, 500);
-                
-                // 1.4 โชว์ Terminal
-                terminalScreen.classList.remove('hidden');
-                
-                // *** FIX: รีเซ็ต Terminal Style ให้เป็นโหมด Log ***
-                terminal.style.display = ''; 
-                terminal.style.flexDirection = ''; 
-                terminal.style.alignItems = ''; 
-                terminal.style.justifyContent = ''; 
-                terminal.style.overflowY = 'auto'; 
-                terminal.innerHTML = ''; 
-                // ***********************************************
-
-                // 1.5 เริ่มรันสเต็ปแรก (โชว์ปุ่ม 'เชื่อมต่อ')
-                showNextButton(); 
+                } finally {
+                    // 1.1 เล่นเพลงตอนกดหัวใจ (ทำต่อไปแม้ audio context จะพัง)
+                    bgMusic.play().catch(e => console.error("Audio play failed:", e));
+                    
+                    // 1.2 โชว์ Music Player
+                    musicPlayerContainer.classList.remove('opacity-0');
+                    musicPlayerContainer.style.opacity = '1';
+                    if (loadingRight) loadingRight.style.display = 'none'; // ซ่อนชีพจรขวา
+                    
+                    // 1.3 ซ่อนปุ่ม (Heart Screen)
+                    entryScreen.style.transition = 'opacity 0.5s ease-out';
+                    entryScreen.style.opacity = '0';
+                    setTimeout(() => {
+                        entryScreen.style.display = 'none';
+                    }, 500);
+                    
+                    // 1.4 โชว์ Terminal
+                    terminalScreen.classList.remove('hidden');
+                    
+                    // 1.5 รีเซ็ต Terminal Style ให้เป็นโหมด Log 
+                    terminal.style.display = ''; 
+                    terminal.style.flexDirection = ''; 
+                    terminal.style.alignItems = ''; 
+                    terminal.style.justifyContent = ''; 
+                    terminal.style.overflowY = 'auto'; 
+                    terminal.innerHTML = ''; 
+                    
+                    // 1.6 เริ่มรันสเต็ปแรก (โชว์ปุ่ม 'เชื่อมต่อ')
+                    showNextButton(); 
+                }
             };
         };
 
         // --- 4. ฟังก์ชันเกี่ยวกับเสียง (Tone.js) ---
-        function setupAudio() {
+        // *** FIX: Make setupAudio async ***
+        async function setupAudio() {
             if (audioReady) return;
-            try {
-                if (typeof Tone === 'undefined') {
-                    console.error("Tone.js library not loaded or defined.");
-                    audioReady = false;
-                    return;
-                }
-                
-                Tone.start();
-
-                connectSound = new Tone.Synth({
-                    oscillator: { type: 'square' },
-                    envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.1 }
-                }).toDestination();
-                
-                errorSound = new Tone.Synth({
-                    oscillator: { type: 'triangle' },
-                    envelope: { attack: 0.01, decay: 0.2, sustain: 0, release: 0.1 }
-                }).toDestination();
-                
-                typeSound = new Tone.MonoSynth({
-                    volume: -20,
-                    oscillator: { type: 'sine' },
-                    envelope: { attack: 0.005, decay: 0.05, sustain: 0, release: 0.1 }
-                }).toDestination();
-
-                successSound = new Tone.Synth({
-                    oscillator: { type: 'sine' },
-                    envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.1 }
-                }).toDestination();
-
-                chimeSound = new Tone.PolySynth(Tone.Synth, {
-                    envelope: { attack: 0.01, decay: 0.5, sustain: 0.1, release: 0.5 }
-                }).toDestination();
-                
-                audioReady = true;
-
-            } catch (e) {
-                console.error("Error setting up audio:", e);
+            
+            // We moved the try/catch to the .onclick handler
+            if (typeof Tone === 'undefined') {
+                console.error("Tone.js library not loaded or defined.");
                 audioReady = false;
+                return; // Stop here if Tone isn't loaded
             }
+            
+            // *** AWAIT TONE.START() ***
+            // This MUST be inside the user-triggered click event
+            await Tone.start();
+            console.log("Tone.js audio context started.");
+
+            connectSound = new Tone.Synth({
+                oscillator: { type: 'square' },
+                envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.1 }
+            }).toDestination();
+            
+            errorSound = new Tone.Synth({
+                oscillator: { type: 'triangle' },
+                envelope: { attack: 0.01, decay: 0.2, sustain: 0, release: 0.1 }
+            }).toDestination();
+            
+            typeSound = new Tone.MonoSynth({
+                volume: -20,
+                oscillator: { type: 'sine' },
+                envelope: { attack: 0.005, decay: 0.05, sustain: 0, release: 0.1 }
+            }).toDestination();
+
+            successSound = new Tone.Synth({
+                oscillator: { type: 'sine' },
+                envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.1 }
+            }).toDestination();
+
+            chimeSound = new Tone.PolySynth(Tone.Synth, {
+                envelope: { attack: 0.01, decay: 0.5, sustain: 0.1, release: 0.5 }
+            }).toDestination();
+            
+            audioReady = true;
         }
 
         function playSound(sound, note, duration = '16n') {
-            if (!audioReady || !sound) return;
+            if (!audioReady || !sound) return; // Check audioReady flag
             try {
                 sound.triggerAttackRelease(note, duration);
             } catch (e) {
